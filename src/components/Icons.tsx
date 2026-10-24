@@ -62,6 +62,14 @@ export function CloseIcon({ size = 16 }: IconProps) {
   );
 }
 
+export function BookmarkIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M7 4h10v16l-5-4-5 4z" />
+    </svg>
+  );
+}
+
 export function ReuseIcon({ size = 16 }: IconProps) {
   return (
     <svg {...base(size)}>

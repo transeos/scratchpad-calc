@@ -36,6 +36,13 @@ export function formatRelativeTime(from: number, now: number = Date.now()): stri
   return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
+const dateTimeFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+/** Absolute date and time in the user's locale, e.g. "24 Oct 2026, 14:05". */
+export function formatDateTime(at: number): string {
+  return dateTimeFormat.format(at);
+}
+
 /** ExprTk diagnostics arrive as "ERR042 - Something went wrong". */
 export function formatDiagnostic(error: string): string {
   return error.replace(/^ERR\d+\s*-\s*/, '');

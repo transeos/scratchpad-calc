@@ -3,12 +3,23 @@
 export interface HistoryEntry {
   id: string;
   expression: string;
-  value: number;
+  /** Null for a manually added expression that did not evaluate. */
+  value: number | null;
   /** Epoch milliseconds. */
   at: number;
+  /** Added from the History panel; never removed automatically. */
+  manual: boolean;
 }
 
 export type VariableMap = Record<string, number>;
+
+export interface VariableEntry {
+  value: number;
+  /** Epoch milliseconds of the last change. */
+  at: number;
+}
+
+export type VariableEntries = Record<string, VariableEntry>;
 
 export type ModuleStatus = 'loading' | 'ready' | 'failed';
 
