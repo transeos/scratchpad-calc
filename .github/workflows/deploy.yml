@@ -25,7 +25,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version-file: .nvmrc
 
       # package-lock.json is gitignored, so `npm ci` has nothing to install from.
       - run: npm install

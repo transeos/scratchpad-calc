@@ -423,17 +423,6 @@ select {
   border-color: var(--warm);
 }
 
-.key.accent {
-  color: var(--accent-fg);
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: none;
-}
-
-.key.accent:hover {
-  background: var(--accent-hover);
-}
-
 /* ----------------------------------------------------------------- chips -- */
 
 .search {

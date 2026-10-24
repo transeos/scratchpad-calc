@@ -4,6 +4,9 @@
   "private": true,
   "description": "Scientific calculator powered by ExprTk compiled to WebAssembly",
   "license": "MIT",
+  "engines": {
+    "node": ">=26.7.0"
+  },
   "scripts": {
     "dev": "webpack serve --mode development",
     "build": "webpack --mode production",

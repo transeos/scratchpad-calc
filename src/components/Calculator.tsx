@@ -366,12 +366,7 @@ export default function Calculator({ initialExpression = '' }: CalculatorProps) 
 
         <div className="panel" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
           {tab === 'numpad' && (
-            <Numpad
-              onInsert={insert}
-              onBackspace={backspace}
-              onSubmit={commit}
-              canSubmit={evaluation?.ok === true}
-            />
+            <Numpad onInsert={insert} onBackspace={backspace} />
           )}
 
           {tab === 'functions' && <Functions onInsert={insert} />}
