@@ -154,13 +154,15 @@ export default function Calculator({ initialExpression = '' }: CalculatorProps) 
     });
   }, [restored, variables, history]);
 
-  // Keypad and chip insertions place the caret themselves.
+  // Keypad and chip insertions place the caret themselves. On touch screens focusing
+  // would pop up the on-screen keyboard, so the caret only moves; the keyboard opens
+  // when the text box itself is tapped.
   useEffect(() => {
     if (caret === null) return;
 
     const input = inputRef.current;
     if (input) {
-      input.focus();
+      if (window.matchMedia('(pointer: fine)').matches) input.focus();
       input.setSelectionRange(caret, caret);
     }
 

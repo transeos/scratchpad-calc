@@ -687,13 +687,82 @@ select {
   text-align: center;
 }
 
+
 /* ----------------------------------------------------------- small print -- */
 
-@media (max-width: 560px) {
+/*
+ * App shell for phones, including held sideways: the page fills the visible
+ * viewport (tracked in lib/viewport.ts), so when the on-screen keyboard opens
+ * everything shrinks above it instead of being covered.
+ */
+@media (max-width: 560px), (max-height: 520px) {
   .page {
-    padding: 24px 12px 44px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--app-height, 100dvh);
+    transform: translateY(var(--app-top, 0px));
+    display: flex;
+    flex-direction: column;
+    padding: 12px 12px calc(10px + env(safe-area-inset-bottom));
   }
 
+  .header {
+    order: 1;
+    flex: none;
+    margin: 10px 0 0;
+    text-align: center;
+  }
+
+  .brand-title {
+    font-size: 16px;
+    color: var(--text-muted);
+  }
+
+  .card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .display,
+  .tabs {
+    flex: none;
+  }
+
+  .panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  /* The panel scrolls instead, so lists don't nest a second scroller. */
+  .scroll-area {
+    max-height: none;
+  }
+
+  /* Keys share whatever height the panel has. */
+  .keypad {
+    flex: 1;
+    grid-auto-rows: minmax(36px, 1fr);
+  }
+
+  .key {
+    height: auto;
+  }
+
+  /* Below 16px, iOS zooms the page in when an input is focused. */
+  .input,
+  .search {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 560px) {
   .display {
     padding: 16px 14px 14px;
   }
@@ -716,6 +785,61 @@ select {
 
   .history-grid .cell-time,
   .vars-grid .cell-time {
+    display: none;
+  }
+}
+
+/* Keyboard open or a short screen (data-compact, set by lib/viewport.ts): tighten
+   everything so the keypad still fits. */
+@media (max-width: 560px), (max-height: 520px) {
+  :root[data-compact] .page {
+    padding: 6px 8px;
+  }
+
+  :root[data-compact] .header {
+    display: none;
+  }
+
+  :root[data-compact] .display {
+    padding: 8px 10px;
+  }
+
+  :root[data-compact] .result-row {
+    margin-top: 6px;
+    min-height: 30px;
+  }
+
+  :root[data-compact] .result {
+    font-size: 20px;
+  }
+
+  :root[data-compact] .result-idle {
+    font-size: 17px;
+  }
+
+  :root[data-compact] .icon-btn {
+    height: 30px;
+    min-width: 30px;
+  }
+
+  :root[data-compact] .tab {
+    padding: 6px 12px 7px;
+  }
+
+  :root[data-compact] .panel {
+    padding: 8px;
+  }
+
+  :root[data-compact] .keypad {
+    gap: 5px;
+    grid-auto-rows: minmax(28px, 1fr);
+  }
+
+  :root[data-compact] .key {
+    font-size: 15px;
+  }
+
+  :root[data-compact] .panel-note {
     display: none;
   }
 }

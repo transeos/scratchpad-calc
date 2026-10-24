@@ -1,7 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import Calculator from '@/components/Calculator';
+import { trackViewport } from '@/lib/viewport';
 import './styles.css';
+
+trackViewport();
 
 // Share links carry the expression as ?expr=<url-encoded expression>.
 const initialExpression = new URLSearchParams(window.location.search).get('expr') ?? '';
