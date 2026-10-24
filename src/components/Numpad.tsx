@@ -3,8 +3,6 @@ import type { InsertFn } from '@/lib/types';
 interface NumpadProps {
   onInsert: InsertFn;
   onBackspace: () => void;
-  onSubmit: () => void;
-  canSubmit: boolean;
 }
 
 interface Key {
@@ -12,12 +10,15 @@ interface Key {
   token: string;
   /** Caret offset within the token; defaults to its length. */
   caret?: number;
-  variant?: 'op' | 'fn' | 'warm' | 'accent';
+  variant?: 'op' | 'fn' | 'warm';
   title?: string;
 }
 
-/** Four columns, mirroring the layout of a pocket scientific calculator. */
-const KEYS: (Key | 'backspace' | 'equals')[] = [
+/**
+ * Four columns, mirroring the layout of a pocket scientific calculator. There is no
+ * = key: results update as you type.
+ */
+const KEYS: (Key | 'backspace')[] = [
   { label: '1/x', token: '1/()', caret: 3, variant: 'fn', title: 'Reciprocal' },
   { label: 'x²', token: '^2', variant: 'fn', title: 'Square' },
   { label: '√x', token: 'sqrt()', caret: 5, variant: 'fn', title: 'Square root' },
@@ -46,10 +47,10 @@ const KEYS: (Key | 'backspace' | 'equals')[] = [
   { label: 'π', token: 'pi', variant: 'fn', title: 'Pi' },
   { label: '0', token: '0' },
   { label: '.', token: '.' },
-  'equals'
+  { label: 'x°', token: 'deg2rad()', caret: 8, variant: 'fn', title: 'Degrees to radians (deg2rad)' }
 ];
 
-export default function Numpad({ onInsert, onBackspace, onSubmit, canSubmit }: NumpadProps) {
+export default function Numpad({ onInsert, onBackspace }: NumpadProps) {
   return (
     <div className="keypad">
       {KEYS.map((key, index) => {
@@ -64,21 +65,6 @@ export default function Numpad({ onInsert, onBackspace, onSubmit, canSubmit }: N
               onClick={onBackspace}
             >
               &#9003;
-            </button>
-          );
-        }
-
-        if (key === 'equals') {
-          return (
-            <button
-              key="equals"
-              type="button"
-              className="key accent"
-              title="Evaluate and save to history"
-              disabled={!canSubmit}
-              onClick={onSubmit}
-            >
-              =
             </button>
           );
         }
