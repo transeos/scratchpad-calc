@@ -6,10 +6,10 @@ import Numpad from './Numpad';
 import Variables from './Variables';
 import { loadExprtk, type EvalResult, type ExprtkModule } from '@/lib/exprtk';
 import { isReservedName } from '@/lib/format';
+import { loadState, saveState } from '@/lib/storage';
 import type { HistoryEntry, ModuleStatus, VariableMap } from '@/lib/types';
 
-const STORAGE_KEY = 'calculator.v2';
-const MAX_HISTORY = 100;
+const MAX_HISTORY = 10_000;
 
 type TabId = 'numpad' | 'functions' | 'variables' | 'history';
 
@@ -19,11 +19,6 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'variables', label: 'Variables' },
   { id: 'history', label: 'History' }
 ];
-
-interface PersistedState {
-  variables?: unknown;
-  history?: unknown;
-}
 
 interface CalculatorProps {
   /** Seeded from ?expr=<expression> share links. */
@@ -35,18 +30,6 @@ let sequence = 0;
 function nextId(): string {
   sequence += 1;
   return `${Date.now().toString(36)}-${sequence}`;
-}
-
-function readStored(): PersistedState {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-
-    const parsed: unknown = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? (parsed as PersistedState) : {};
-  } catch {
-    return {};
-  }
 }
 
 function sanitiseVariables(input: unknown): VariableMap {
@@ -114,20 +97,26 @@ export default function Calculator({ initialExpression = '' }: CalculatorProps) 
 
   // Restoring after mount keeps the server and client markup identical.
   useEffect(() => {
-    const stored = readStored();
-    setVariables(sanitiseVariables(stored.variables));
-    setHistory(sanitiseHistory(stored.history));
-    setRestored(true);
+    let cancelled = false;
+
+    void loadState().then((stored) => {
+      if (cancelled) return;
+      setVariables(sanitiseVariables(stored.variables));
+      setHistory(sanitiseHistory(stored.history));
+      setRestored(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!restored) return;
 
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ variables, history }));
-    } catch {
+    saveState({ variables, history }).catch(() => {
       // Storage can be full or blocked; the calculator still works without it.
-    }
+    });
   }, [restored, variables, history]);
 
   // Keypad and chip insertions place the caret themselves.
