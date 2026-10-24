@@ -588,11 +588,11 @@ select {
 }
 
 .vars-grid {
-  grid-template-columns: 1fr 1fr 36px;
+  grid-template-columns: 1fr 1fr 150px 36px;
 }
 
 .history-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr) 96px 72px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr) 150px 72px;
 }
 
 .cell-mono {
@@ -606,6 +606,19 @@ select {
 .cell-value {
   color: var(--accent);
   font-weight: 600;
+}
+
+.cell-invalid {
+  color: var(--text-faint);
+}
+
+.entry-mark {
+  margin-right: 6px;
+  color: var(--accent);
+}
+
+.entry-mark svg {
+  vertical-align: -2px;
 }
 
 .cell-time {
@@ -641,6 +654,12 @@ select {
   margin-bottom: 12px;
 }
 
+.panel-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
 .panel-hint {
   margin: 0;
   color: var(--text-muted);
@@ -661,15 +680,11 @@ select {
   font-weight: 600;
 }
 
-.footer {
-  margin-top: 18px;
+.panel-note {
+  margin: 12px 0 0;
   color: var(--text-faint);
   font-size: 12.5px;
   text-align: center;
-}
-
-.footer a {
-  color: var(--text-muted);
 }
 
 /* ----------------------------------------------------------- small print -- */
@@ -695,7 +710,12 @@ select {
     grid-template-columns: minmax(0, 1fr) minmax(0, 0.6fr) 64px;
   }
 
-  .history-grid .cell-time {
+  .vars-grid {
+    grid-template-columns: 1fr 1fr 36px;
+  }
+
+  .history-grid .cell-time,
+  .vars-grid .cell-time {
     display: none;
   }
 }

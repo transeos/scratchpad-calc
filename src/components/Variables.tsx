@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { formatNumber, isReservedName, isValidVariableName } from '@/lib/format';
-import type { InsertFn, VariableMap } from '@/lib/types';
+import {
+  formatDateTime,
+  formatNumber,
+  formatRelativeTime,
+  isReservedName,
+  isValidVariableName
+} from '@/lib/format';
+import type { InsertFn, VariableEntries } from '@/lib/types';
 import { TrashIcon } from './Icons';
 
 interface VariablesProps {
-  variables: VariableMap;
+  variables: VariableEntries;
   missing: string[];
   onSet: (name: string, value: number) => void;
   onRemove: (name: string) => void;
@@ -97,34 +103,44 @@ export default function Variables({ variables, missing, onSet, onRemove, onInser
           <div className="list-head vars-grid">
             <span>Variable</span>
             <span>Value</span>
+            <span className="cell-time">Date &amp; time</span>
             <span />
           </div>
           <div className="scroll-area">
-            {names.map((item) => (
-              <div className="list-row vars-grid" key={item}>
-                <button
-                  type="button"
-                  className="chip"
-                  title={`Insert ${item} into the expression`}
-                  onClick={() => onInsert(item, item.length)}
-                >
-                  {item}
-                </button>
-                <span className="cell-mono cell-value">{formatNumber(variables[item])}</span>
-                <button
-                  type="button"
-                  className="icon-btn warm"
-                  title={`Delete ${item}`}
-                  aria-label={`Delete ${item}`}
-                  onClick={() => onRemove(item)}
-                >
-                  <TrashIcon />
-                </button>
-              </div>
-            ))}
+            {names.map((item) => {
+              const { value, at } = variables[item];
+
+              return (
+                <div className="list-row vars-grid" key={item}>
+                  <button
+                    type="button"
+                    className="chip"
+                    title={`Insert ${item} into the expression`}
+                    onClick={() => onInsert(item, item.length)}
+                  >
+                    {item}
+                  </button>
+                  <span className="cell-mono cell-value">{formatNumber(value)}</span>
+                  <span className="cell-time" title={formatRelativeTime(at)}>
+                    {formatDateTime(at)}
+                  </span>
+                  <button
+                    type="button"
+                    className="icon-btn warm"
+                    title={`Delete ${item}`}
+                    aria-label={`Delete ${item}`}
+                    onClick={() => onRemove(item)}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
+
+      <p className="panel-note">Variables stay on this device.</p>
     </div>
   );
 }

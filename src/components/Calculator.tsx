@@ -7,7 +7,13 @@ import Variables from './Variables';
 import { loadExprtk, type EvalResult, type ExprtkModule } from '@/lib/exprtk';
 import { isReservedName } from '@/lib/format';
 import { loadState, saveState } from '@/lib/storage';
-import type { HistoryEntry, ModuleStatus, VariableMap } from '@/lib/types';
+import type {
+  HistoryEntry,
+  ModuleStatus,
+  VariableEntries,
+  VariableEntry,
+  VariableMap
+} from '@/lib/types';
 
 const MAX_HISTORY = 10_000;
 
@@ -32,39 +38,68 @@ function nextId(): string {
   return `${Date.now().toString(36)}-${sequence}`;
 }
 
-function sanitiseVariables(input: unknown): VariableMap {
-  const out: VariableMap = {};
+function sanitiseVariables(input: unknown): VariableEntries {
+  const out: VariableEntries = {};
   if (!input || typeof input !== 'object') return out;
 
-  for (const [name, value] of Object.entries(input as Record<string, unknown>)) {
+  // Earlier builds saved bare numbers with no time; they are stamped on first load.
+  const now = Date.now();
+
+  for (const [name, stored] of Object.entries(input as Record<string, unknown>)) {
+    if (typeof stored === 'number' && Number.isFinite(stored)) {
+      out[name] = { value: stored, at: now };
+      continue;
+    }
+
+    if (!stored || typeof stored !== 'object') continue;
+    const { value, at } = stored as Partial<Record<keyof VariableEntry, unknown>>;
     if (typeof value === 'number' && Number.isFinite(value)) {
-      out[name] = value;
+      out[name] = { value, at: typeof at === 'number' ? at : now };
     }
   }
 
   return out;
 }
 
+/** Drops the oldest automatic entries past MAX_HISTORY; manual ones are left to the user. */
+function capHistory(entries: HistoryEntry[]): HistoryEntry[] {
+  let excess = entries.length - MAX_HISTORY;
+  if (excess <= 0) return entries;
+
+  const kept = [...entries];
+  for (let index = kept.length - 1; index >= 0 && excess > 0; index -= 1) {
+    if (!kept[index].manual) {
+      kept.splice(index, 1);
+      excess -= 1;
+    }
+  }
+
+  return kept;
+}
+
 function sanitiseHistory(input: unknown): HistoryEntry[] {
   if (!Array.isArray(input)) return [];
 
-  return input
-    .filter((entry): entry is HistoryEntry => {
+  const entries = input
+    .filter((entry) => {
       if (!entry || typeof entry !== 'object') return false;
       const candidate = entry as Partial<HistoryEntry>;
       return (
         typeof candidate.id === 'string' &&
         typeof candidate.expression === 'string' &&
-        typeof candidate.value === 'number' &&
+        (typeof candidate.value === 'number' || candidate.value === null) &&
         typeof candidate.at === 'number'
       );
     })
-    .slice(0, MAX_HISTORY);
+    // Entries saved before manual adds existed have no flag.
+    .map((entry: HistoryEntry) => ({ ...entry, manual: entry.manual === true }));
+
+  return capHistory(entries);
 }
 
 export default function Calculator({ initialExpression = '' }: CalculatorProps) {
   const [expression, setExpression] = useState(initialExpression);
-  const [variables, setVariables] = useState<VariableMap>({});
+  const [variables, setVariables] = useState<VariableEntries>({});
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [tab, setTab] = useState<TabId>('numpad');
   const [status, setStatus] = useState<ModuleStatus>('loading');
@@ -139,15 +174,21 @@ export default function Calculator({ initialExpression = '' }: CalculatorProps) 
     return () => window.clearTimeout(timer);
   }, [copied]);
 
+  // ExprTk only needs the numbers; recomputed only when a variable changes.
+  const values = useMemo<VariableMap>(
+    () => Object.fromEntries(Object.entries(variables).map(([name, entry]) => [name, entry.value])),
+    [variables]
+  );
+
   const evaluation = useMemo<EvalResult | null>(() => {
     if (!exprtk || expression.trim() === '') return null;
 
     try {
-      return exprtk.evaluate(expression, variables);
+      return exprtk.evaluate(expression, values);
     } catch (error) {
       return { ok: false, value: 0, error: String(error), position: -1 };
     }
-  }, [exprtk, expression, variables]);
+  }, [exprtk, expression, values]);
 
   const missing = useMemo(() => {
     if (!exprtk || expression.trim() === '') return [];
@@ -190,19 +231,51 @@ export default function Calculator({ initialExpression = '' }: CalculatorProps) 
     setCaret(start - 1);
   }, [expression]);
 
+  // Automatic entries contained in the new expression are treated as drafts of it
+  // and dropped. Re-recording an existing expression keeps its manual flag.
   const commit = useCallback(() => {
     if (!evaluation?.ok) return;
 
     const trimmed = expression.trim();
+    const { value } = evaluation;
+
+    setHistory((previous) => {
+      const existing = previous.find((item) => item.expression === trimmed);
+      const entry: HistoryEntry = {
+        id: nextId(),
+        expression: trimmed,
+        value,
+        at: Date.now(),
+        manual: existing?.manual ?? false
+      };
+      const kept = previous.filter(
+        (item) => item.expression !== trimmed && (item.manual || !trimmed.includes(item.expression))
+      );
+
+      return capHistory([entry, ...kept]);
+    });
+  }, [evaluation, expression]);
+
+  // Waiting for the restore stops it from overwriting what was recorded meanwhile.
+  useEffect(() => {
+    if (restored) commit();
+  }, [restored, commit]);
+
+  // Manual adds skip both rules: the expression may be invalid and nothing is pruned.
+  const addManually = useCallback(() => {
+    const trimmed = expression.trim();
+    if (trimmed === '') return;
+
     const entry: HistoryEntry = {
       id: nextId(),
       expression: trimmed,
-      value: evaluation.value,
-      at: Date.now()
+      value: evaluation?.ok ? evaluation.value : null,
+      at: Date.now(),
+      manual: true
     };
 
     setHistory((previous) =>
-      [entry, ...previous.filter((item) => item.expression !== trimmed)].slice(0, MAX_HISTORY)
+      capHistory([entry, ...previous.filter((item) => item.expression !== trimmed)])
     );
   }, [evaluation, expression]);
 
@@ -227,7 +300,7 @@ export default function Calculator({ initialExpression = '' }: CalculatorProps) 
   }, [copy, expression]);
 
   const setVariable = useCallback((name: string, value: number) => {
-    setVariables((previous) => ({ ...previous, [name]: value }));
+    setVariables((previous) => ({ ...previous, [name]: { value, at: Date.now() } }));
   }, []);
 
   const removeVariable = useCallback((name: string) => {
@@ -314,6 +387,8 @@ export default function Calculator({ initialExpression = '' }: CalculatorProps) 
           {tab === 'history' && (
             <History
               entries={history}
+              canAdd={expression.trim() !== ''}
+              onAdd={addManually}
               onReuse={reuse}
               onRemove={(id) => setHistory((previous) => previous.filter((item) => item.id !== id))}
               onClear={() => setHistory([])}
@@ -321,14 +396,6 @@ export default function Calculator({ initialExpression = '' }: CalculatorProps) 
           )}
         </div>
       </div>
-
-      <p className="footer">
-        Powered by{' '}
-        <a href="https://www.partow.net/programming/exprtk/" target="_blank" rel="noreferrer">
-          ExprTk
-        </a>{' '}
-        running in your browser. Variables and history stay on this device.
-      </p>
     </main>
   );
 }
